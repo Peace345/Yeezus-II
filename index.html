@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ye Unreleased Archive</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      background: #0b0b0b;
+      color: white;
+      font-family: Arial;
+    }
+
+    /* LIBRARY */
+   #library {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+  gap: 16px !important;
+  padding: 12px;
+}
+
+.album {
+  width: 100%;
+  max-width: 180px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.album img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
+}
+
+    /* PLAYER */
+    .player {
+      display: none;
+      padding: 20px;
+    }
+
+    .cover {
+      width: 220px;
+      border-radius: 12px;
+    }
+
+    .song {
+      margin: 10px 0;
+      cursor: pointer;
+      opacity: 0.7;
+    }
+
+    .song:hover {
+      opacity: 1;
+    }
+
+    .active {
+      opacity: 1;
+      text-decoration: underline;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      background: #1f1f1f;
+      border: none;
+      border-radius: 6px;
+      color: white;
+    }
+
+    .nowPlaying {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #111;
+      padding: 10px;
+      font-size: 13px;
+      text-align: center;
+    }
+
+  }
+  </style>
+</head>
+
+<body>
+
+<!--  -->
+<div id="library"></div>
+
+<div id="libraryStats"></div>
+  
+<div id="" class=""></div>
+
+<div id="Stats" class="-stats"></div>
+
+<!-- PLAYER -->
+<div id="player" class="player">
+
+  <button onclick="goBack()">← Back</button>
+  <button onclick="toggleShuffle()">🔀 Shuffle</button>
+  <button onclick="togglePlay()">▶️ / ⏸</button>
+  <button onclick="back10()">⏪ 10s</button>
+  <button onclick="forward10()">⏩ 10s</button>
+
+  <h2 id="albumTitle"></h2>
+  <img id="cover" class="cover">
+
+  <h3 id="title">Select a song</h3>
+  <p id="artist"></p>
+
+  <audio id="audio"></audio>
+
+  <div id="songs"></div>
+
+</div>
+
+<div class="nowPlaying" id="nowPlaying">Nothing playing</div>
+
+<script>
+
+let Mode = false;
+
+const audio = document.getElementById("audio");
+const player = document.getElementById("player");
+const nowPlaying = document.getElementById("nowPlaying");
+
+let currentAlbum;
+let currentIndex = 0;
+let shuffleMode = false;
+
+const library = document.getElementById("library");
+// --------------------
+// YOUR ALBUMS
+// --------------------
+const albums = [
+   {
+    name: "The Prerequisite",
+    cover: "theprerequisitecover.jpg",
+    songs: [
+      { file: "homewindy.mp3", title: "Home/Windy", artist: "Kanye West, John Legend" },
+      { file: "jesuswalks.mp3", title: "Jesus Walks", artist: "Kanye West" },
+      { file: "haveityourway.mp3", title: "Have It Your Way", artist: "Kanye West" },
+      { file: "ineedtoknow.mp3", title: "I Need To Know", artist: "Kanye West" },
+      { file: "neverlettinggothestalkersong.mp3", title: "Never Letting Go/The Stalker Song", artist: "Kanye West" },
+      { file: "heymama.mp3", title: "Hey Mama", artist: "Kanye West" },
+      { file: "dreamcometrue.mp3", title: "Dream Come True", artist: "Kanye West" },
+      { file: "lastfreestyle.mp3", title: "Last Freestyle", artist: "Kanye West" }
+    ]
+  },
+
+  {
+    name: "I'm Good",
+    cover: "imgoodcover.png",
+    songs: [
+      { file: "introimgood.mp3", title: "Intro (I'm Good)", artist: "Kanye West, John Legend" },
+      { file: "heavyhitters.mp3", title: "Heavy Hitters", artist: "Kanye West, GLC" },
+      { file: "twowords.mp3", title: "Two Words", artist: "Kanye West, Freeway, Mos Def, The Boys Choir of Harlem" },
+      { file: "iusedtoloveu.mp3", title: "Used To Love U", artist: "Kanye West, John Legend" },
+      { file: "dropdeadgorgeous.mp3", title: "Drop Dead Gorgeous", artist: "Kanye West, Murphy Lee" },
+      { file: "outthegame.mp3", title: "Out The Game", artist: "Kanye West, Consequence, John Legend" },
+      { file: "stircrazy.mp3", title: "Stir Crazy", artist: "Kanye West, Eminem" }
+    ]
+  },
+  
+  {
+    name: "Freshman Adjustment",
+    cover: "freshmanadjustmentcover.jpg",
+    songs: [
+      { file: "apologize.mp3", title: "Apologize", artist: "Kanye West" },
+      { file: "livinamoviepart1.mp3", title: "Livin' A Movie Pt. 1", artist: "Kanye West" },
+      { file: "livinamoviepart2.mp3", title: "Livin' A Movie Pt. 2", artist: "Kanye West" },
+      { file: "thegossipfiles.mp3", title: "The Gossip Files", artist: "Kanye West" },
+      { file: "aboutanangel.mp3", title: "About An Angel", artist: "Kanye West" },
+      { file: "mywayfreshmanadjustment.mp3", title: "My Way", artist: "Kanye West, Tarrey Torae" },
+      { file: "03electricrelaxation.mp3", title: "'03 Electric Relaxation", artist: "Kanye West, Consequence" },
+      { file: "wackniggaz.mp3", title: "Wack Niggaz", artist: "Kanye West, Talib Kweli, Common, Consequence" },
+      { file: "thegoodthebadtheugly.mp3", title: "The Good, The Bad, The Ugly", artist: "Kanye West, Consequence" }
+    ]
+  },
+
+   {
+    name: "Late Registration",
+    cover: "lateregistrationcover.jpg",
+    songs: [
+      { file: "backtobasics.mp3", title: "Back To Basics", artist: "Kanye West, Common" },
+      { file: "wecanmakeitbetter.mp3", title: "We Can Make It Better", artist: "Kanye West, Q-Tip, Talib Kweli, Common, Rhymefest, Tony Williams" },
+      { file: "motherfucker.mp3", title: "Motherfucker", artist: "Kanye West" },
+      { file: "nobodyeatsbutme.mp3", title: "Nobody Eats But Me", artist: "Kanye West, John Legend, Miri Ben-Ari" }
+    ]
+  },
+  
+  {
+    name: "Graduation",
+    cover: "graduationcover.jpg",
+    songs: [
+      { file: "buildings.mp3", title: "Buildings", artist: "Kanye West, Jay-Z" },
+      { file: "passenger.mp3", title: "Passenger", artist: "Kanye West" },
+      { file: "bittersweetpoetry.mp3", title: "Bittersweet Poetry", artist: "Kanye West, John Mayer" }
+    ]
+  },
+
+  {
+    name: "Winter Spring Summer Fall",
+    cover: "winterspringsummerfallcover.jpeg",
+    songs: [
+      { file: "firestone.mp3", title: "Firestone", artist: "Kanye West, Pusha T, Lupe Fiasco" },
+      { file: "singlefoulrhyme.mp3", title: "Single Foul Rhyme", artist: "Kanye West, MF DOOM, Talib Kweli" },
+      { file: "magichour.mp3", title: "Magic Hour", artist: "Kanye West, Rick Ross" },
+      { file: "wefightwelove.mp3", title: "We Fight/We Love", artist: "Kanye West, Consequence, Q-Tip" },
+      { file: "singsing.mp3", title: "SingSing", artist: "Kanye West" }
+    ]
+  },
+  
+  {
+    name: "Good Ass Job",
+    cover: "newgoodasscover.jpg",
+    songs: [
+      { file: "seemenow.mp3", title: "See Me Now", artist: "Kanye West, Beyoncé, Charlie Wilson, Big Sean" },
+      { file: "christiandiordenimflow.mp3", title: "Christian Dior Denim Flow", artist: "Kanye West, Kid Cudi, Pusha T, John Legend, Lloyd Banks, Ryan Leslie" },
+      { file: "shootup.mp3", title: "Shoot Up", artist: "Kanye West, Santigold, Bon Iver" },
+      { file: "livefastdieyoung.mp3", title: "Live Fast Die Young", artist: "Kanye West, Rick Ross, Tony Williams, Connie Mitchell" },
+      { file: "dontlookdown.mp3", title: "Don't Look Down", artist: "Kanye West, Mos Def, Lupe Fiasco, Big Sean" },
+      { file: "takeonefortheteam.mp3", title: "Take One For The Team", artist: "Kanye West, Keri Hilson, Pusha T, Cyhi The Prynce" },
+      { file: "downtown.mp3", title: "Downtown", artist: "Kanye West, Jeezy" },
+      { file: "throwmoneyeverywhere.mp3", title: "Throw Money Everywhere", artist: "Kanye West" },
+      { file: "whitedress.mp3", title: "White Dress", artist: "Kanye West" },
+      { file: "lookingfortrouble.mp3", title: "Looking For Trouble", artist: "Kanye West, Pusha T, Big Sean, CyHi the Prynce, J Cole" },
+      { file: "flashinglightsii.mp3", title: "Flashing Lights II", artist: "Kanye West, Charlie Wilson" },
+      { file: "mamasboyfriends.mp3", title: "Mamas Boyfriends", artist: "Kanye West" },
+      { file: "neverseemeagain.mp3", title: "Never See Me Again", artist: "Kanye West" }
+    ]
+  },
+
+  {
+    name: "Child Rebel Soldier",
+    cover: "childrebelsoldiercover.jpg",
+    songs: [
+      { file: "usplacers.mp3", title: "Us Placers", artist: "Kanye West, Lupe Fiasco, Pharrell Williams, Thom Yorke" },
+      { file: "diamondsanddollars.mp3", title: "Diamonds & Dollars", artist: "Kanye West, Lupe Fiasco, Pharrell Williams" },
+      { file: "childrebelsoldier.mp3", title: "Child Rebel Soldier", artist: "Kanye West, Lupe Fiasco, Pharrell Williams" },
+      { file: "dontstop.mp3", title: "Don't Stop!", artist: "Kanye West, Lupe Fiasco, Pharrell Williams" },
+      { file: "martyrs.mp3", title: "Martyrs", artist: "Kanye West, Lupe Fiasco, Pharrell Williams, Commmon, Pusha T" },
+      { file: "moneysick.mp3", title: "Money Sick", artist: "Kanye West, Lupe Fiasco, Pharrell Williams, Jay-Z, DJ Drama" },
+      { file: "backbypopulardemand.mp3", title: "Back By Popular Demand", artist: "Kanye West, Lupe Fiasco, Pharrell Williams, Pusha T, Fabolous" }
+    ]
+  },
+
+    {
+    name: "My Beautiful Dark Twisted Fantasy",
+    cover: "mbdtfcover.jpg",
+    songs: [
+      { file: "sweatonmyface.mp3", title: "Sweat On My Face", artist: "Kanye West, Talib Kweli, Consequence, Mos Def" },
+      { file: "pure.mp3", title: "Pure", artist: "Kanye West, Mr. Hudson" },
+      { file: "hellofalife.mp3", title: "Hell Of A Life", artist: "Kanye West, Bon Iver" },
+      { file: "higher.mp3", title: "Higher", artist: "Kanye West" }
+    ]
+  },
+
+  {
+    name: "Watch The Throne",
+    cover: "watchthethronecover.jpg",
+    songs: [
+      { file: "summerofdreams.mp3", title: "Summer of Dreams", artist: "Kanye West, Jay-Z" },
+      { file: "allthetime.mp3", title: "All The Time", artist: "Kanye West, Jay-Z" },
+      { file: "notthesame.mp3", title: "Not The Same (Black Bruce Wayne)", artist: "Kanye West, Jay-Z, Shire" },
+      { file: "livingsoitalian.mp3", title: "Living So Italian", artist: "Kanye West, Jay-Z" },
+      { file: "niggasinparisv2.mp3", title: "Niggas In Paris (v2)", artist: "Kanye West, Jay-Z, T.I." }
+    ]
+  },
+
+  {
+    name: "Thank God For Drugs",
+    cover: "tgfdcover.jpg",
+    songs: [
+      { file: "iamnothome.mp3", title: "I Am Not Home", artist: "Kanye West" },
+      { file: "perfectbitch.mp3", title: "Perfect Bitch", artist: "Kanye West, Justxn Paul" },
+      { file: "goodthingsdontlast.mp3", title: "Good Things Don't Last", artist: "Kanye West" },
+      { file: "emotionless.mp3", title: "Emotionless", artist: "Kanye West, Chantal Kreviazuk, Kendrick Lamar" },
+      { file: "louder.mp3", title: "LOUDER!", artist: "Kanye West, Chantal Kreviazuk, Pusha T" },
+      { file: "nononono.mp3", title: "No No No No", artist: "Kanye West, Travis Scott, 2 Chainz, The-Dream" },
+      { file: "hollywood.mp3", title: "Hollywood", artist: "Kanye West, Justxn Paul" },
+      { file: "wow!.mp3", title: "WOW!", artist: "Kanye West, Justxn Paul" },
+      { file: "blkkkskinhead.mp3", title: "BLKKK SKINHEAD", artist: "Kanye West" },
+      { file: "bloodontheleaves.mp3", title: "Blood On The Leaves", artist: "Kanye West" },
+      { file: "awesome.mp3", title: "Awesome", artist: "Kanye West" },
+      { file: "nobodytolove.mp3", title: "Nobody To Love", artist: "Kanye West, Charlie Wilson" }
+    ]
+  },
+
+  {
+    name: "Yeezus II",
+    cover: "yeezusiicover.jpeg",
+    songs: [
+      { file: "theworld.mp3", title: "The World", artist: "Kanye West, Bon Iver" },
+      { file: "pissonyourgrave.mp3", title: "Piss On Your Grave", artist: "Kanye West, Travis Scott" },
+      { file: "falloutofheaven.mp3", title: "Fall Out Of Heaven", artist: "Kanye West, Bon Iver, The-Dream" },
+      { file: "newangels.mp3", title: "New Angels", artist: "Kanye West"},
+      { file: "youaintnomodel.mp3", title: "You Ain't No Models", artist: "Kanye West, Livvi Franc" },
+      { file: "ninachop.mp3", title: "Nina Chop", artist: "Kanye West, Swizz Beatz, Young Thug" },
+      { file: "godlevel.mp3", title: "God Level", artist: "Kanye West, CyHi the Prynce" },
+      { file: "ultimatelie.mp3", title: "Ultimate Lie", artist: "Kanye West"},
+      { file: "tomcruise.mp3", title: "Tom Cruise", artist: "Kanye West"},
+      { file: "mrsmisery.mp3", title: "Mrs. Misery", artist: "Kanye West, John Legend" },
+      { file: "wheniseeit.mp3", title: "When I See It", artist: "Kanye West, The Weeknd" },
+      { file: "afteryou.mp3", title: "After You", artist: "Kanye West, John Legend, Pusha T, Sia" },
+      { file: "neverletmego.mp3", title: "Never Let Me Go", artist: "Kanye West" },
+      { file: "hummer.mp3", title: "HUMMER", artist: "Kanye West, A$AP Rocky, MovaKween" },
+      { file: "nevertriedthis.mp3", title: "Never Tried This", artist: "Kanye West, CyHi the Prynce" },
+      { file: "sanctified.mp3", title: "Sanctified", artist: "Kanye West, Rick Ross, Big Sean" }
+    ]
+  },
+
+  {
+    name: "So Help Me God",
+    cover: "sohelpmegod.jpg",
+    songs: [
+      { file: "prayer.mp3", title: "Prayer", artist: "Kanye West, Bon Iver" },
+      { file: "hudmoidea.mp3", title: "Hudmo Idea", artist: "Kanye West" },
+      { file: "midastouch.mp3", title: "Midas Touch", artist: "Kanye West, J. Cole, Rihanna" },
+      { file: "floatinsuperstarred.mp3", title: "Floatin'/Super Starred", artist: "Kanye West" },
+      { file: "southsideserenade.mp3", title: "Southside Serenade", artist: "Kanye West" },
+      { file: "howyoufeeling.mp3", title: "How You Feeling", artist: "Kanye West" },
+      { file: "startime.mp3", title: "Star Time", artist: "Kanye West, G Eazy, IDK, Anderson Paak" },
+      { file: "alldayog.mp3", title: "All Day", artist: "Kanye West, Kendrick Lamar" },
+      { file: "thatsonyou.mp3", title: "That's On You", artist: "Kanye West" },
+      { file: "theballadofkanyewestthechosenone.mp3", title: "The Ballad Of Kanye West (The Chosen One)", artist: "Kanye West" },
+      { file: "wolves.mp3", title: "Wolves", artist: "Kanye West, Vic Mensa, Sia, Frank Ocean" },
+      { file: "fourfivesecondsdemo.mp3", title: "FourFiveSeconds", artist: "Kanye West, Paul McCartney" }
+    ]
+  },
+
+  {
+    name: "SWISH",
+    cover: "swishcover.jpg",
+    songs: [
+      { file: "anxiety.mp3", title: "Anxiety", artist: "Kanye West" },
+      { file: "forever.mp3", title: "Forever", artist: "Kanye West" },
+      { file: "dejavu.mp3", title: "Deja Vu", artist: "Kanye West, Kendrick Lamar, Pusha T" },
+      { file: "dontjump.mp3", title: "Don't Jump", artist: "Kanye West, Kendrick Lamar" },
+      { file: "badnight.mp3", title: "Bad Night", artist: "Kanye West, Young Thug" },
+      { file: "themall.mp3", title: "The Mall", artist: "Kanye West, Post Malone" },
+      { file: "fatherstretch.mp3", title: "Father Stretch", artist: "Kanye West, Kendrick Lamar" },
+      { file: "ifeellikethat.mp3", title: "I Feel Like That", artist: "Kanye West, Ty Dolla $ign" },
+      { file: "30hoursdemo.mp3", title: "30 Hours", artist: "Kanye West" },
+      { file: "ultralightbeamog.mp3", title: "Ultralight Beam", artist: "Kanye West, Chance the Rapper" }
+    ]
+  },
+
+  {
+    name: "TurboGrafx16",
+    cover: "turbografx16cover.jpg",
+    songs: [
+      { file: "welcometoucla.mp3", title: "Welcome To UCLA", artist: "Kanye West" },
+      { file: "cantlookintomyeyes.mp3", title: "Can't Look Into My Eyes", artist: "Kanye West, Kid Cudi" },
+      { file: "tongues.mp3", title: "Tongues", artist: "Kanye West" },
+      { file: "alleyesonye.mp3", title: "All Eyes On Ye", artist: "Kanye West" },
+      { file: "richniggadrunk.mp3", title: "Rich Nigga Drunk", artist: "Kanye West, Tyga" },
+      { file: "timmyturnerremix.mp3", title: "Timmy Turner (Remix)", artist: "Kanye West, Desiigner" },
+      { file: "canubeturbografx16version.mp3", title: "Can U Be", artist: "Kanye West, Travis Scott, Kirby Lauryen" },
+      { file: "noreason.mp3", title: "No Reason", artist: "Kanye West, Post Malone, Justin Bieber" }
+    ]
+  },
+
+  {
+    name: "Job Well Done",
+    cover: "jobwelldonecover.jpg",
+    songs: [
+      { file: "goodintro.mp3", title: "Good Intro", artist: "Kanye West, Chance the Rapper, BJ The Chicago Kid, Peter Cottontale, Lili K., Kiara Lanier" },
+      { file: "mj.mp3", title: "MJ", artist: "Kanye West, Chance the Rapper" },
+      { file: "amusementpark.mp3", title: "Amusement Park", artist: "Kanye West, Chance the Rapper, CyHi the Prynce" }
+    ]
+  },
+
+  {
+    name: "LOVE EVERYONE",
+    cover: "loveveryonecover.jpg",
+    songs: [
+      { file: "simulationbaptize.mp3", title: "Simulation Baptize", artist: "Kanye West, A$AP Rocky, Pardison Fontaine" },
+      { file: "howdoyourespond.mp3", title: "How Do You Respond", artist: "Kanye West, Pusha T" },
+      { file: "badpeople.mp3", title: "Bad People", artist: "Kanye West, Nas" },
+      { file: "moonlightinterlude.mp3", title: "Moonlight Interlude", artist: "Kanye West" },
+      { file: "skeletons.mp3", title: "Skeletons", artist: "Kanye West, Travis Scott, Tame Impala" },
+      { file: "everything.mp3", title: "Everything", artist: "Kanye West, Nas" },
+      { file: "brothers.mp3", title: "Brothers", artist: "Kanye West, Chance the Rapper" },
+      { file: "ghosttown.mp3", title: "Ghost Town", artist: "Kanye West, Kid Cudi, 070 Shake, PARTYNEXTDOOR" }
+    ]
+  },
+
+  {
+    name: "Kids See Ghosts",
+    cover: "kidsseeghostscover.jpg",
+    songs: [
+      { file: "devilswatchin.mp3", title: "Devil's Watchin", artist: "Kanye West, Kid Cudi" },
+      { file: "kidsseeghosts.mp3", title: "Kids See Ghosts", artist: "Kanye West, Kid Cudi, Tyler, The Creator, Frank Ocean, Mos Def" },
+      { file: "robinhead.mp3", title: "Robinhood", artist: "Kanye West, Kid Cudi" }
+    ]
+  },
+
+    {
+    name: "Yandhi",
+    cover: "yandhicover.jpg",
+    songs: [
+      { file: "selah.mp3", title: "Selah", artist: "Kanye West" },
+      { file: "chakras.mp3", title: "Chakras", artist: "Kanye West, The-Dream, Ant Clemons" },
+      { file: "thestorm.mp3", title: "The Storm", artist: "Kanye West, Ty Dolla $ign, Kid Cudi, XXXTENTACION" },
+      { file: "80degrees.mp3", title: "80 Degrees", artist: "Kanye West, Ant Clemons" },
+      { file: "newbody.mp3", title: "New Body", artist: "Kanye West, Nicki Minaj, Ty Dolla $ign" },
+      { file: "cityinthesky.mp3", title: "City In The Sky", artist: "Kanye West, Desiigner, Jeremih, Kid Cudi, The-Dream, Ty Dolla $ign, 070 Shake" },
+      { file: "alien.mp3", title: "Alien", artist: "Kanye West, Quavo, Kid Cudi, Young Thug, Ant Clemons" },
+      { file: "lawofattraction.mp3", title: "Law Of Attraction", artist: "Kanye West, Ant Clemons, Clipse, Kenny G" },
+      { file: "ongod.mp3", title: "On God", artist: "Kanye West, Dua Lipa" }
+    ]
+  },
+
+  {
+    name: "Soul Children",
+    cover: "soulchildrencover.jpg",
+    songs: [
+      { file: "unhomme.mp3", title: "Unhomme", artist: "Kanye West" },
+      { file: "soulchildren.mp3", title: "Soul Children", artist: "Kanye West" },
+      { file: "nycevieux.mp3", title: "Nyce Vieux", artist: "Kanye West" },
+      { file: "elsalaurent.mp3", title: "Elsa Laurent", artist: "Kanye West" },
+      { file: "wayback.mp3", title: "Wayback", artist: "Kanye West" },
+      { file: "nydreams.mp3", title: "NY Dreams", artist: "Kanye West" },
+      { file: "joicing.mp3", title: "Joicing", artist: "Kanye West" },
+      { file: "realmannish.mp3", title: "Real Mannish", artist: "Kanye West" },
+      { file: "lillindfors.mp3", title: "Lill Lindfors", artist: "Kanye West" },
+      { file: "lindaperhacs.mp3", title: "Linda Perhacs", artist: "Kanye West" },
+      { file: "emeraldweb.mp3", title: "Emerald Web", artist: "Kanye West" },
+      { file: "novitorpedo.mp3", title: "Novi Torpedo", artist: "Kanye West" },
+      { file: "ukekaan.mp3", title: "Uke Kaan", artist: "Kanye West" }
+    ]
+  },
+
+  {
+    name: "Jesus Is King II",
+    cover: "jesusiskingiicover.jpg",
+    songs: [
+      { file: "dontgiveup.mp3", title: "Don't Give Up", artist: "Kanye West, CyHi the Prynce" },
+      { file: "thisistheglory.mp3", title: "This Is The Glory", artist: "Kanye West, Snoop Dogg" },
+      { file: "wakethedead.mp3", title: "Wake The Dead", artist: "Kanye West" },
+      { file: "findaway.mp3", title: "Find A Way", artist: "Kanye West" },
+      { file: "bound3thisistheday.mp3", title: "Bound 3/This Is The Day", artist: "Kanye West, Consequence" },
+      { file: "handsonremix.mp3", title: "Hands On (Remix)", artist: "Kanye West, Travis Scott" }
+    ]
+  },
+
+   {
+    name: "God's Country",
+    cover: "godscountrycover.jpg",
+    songs: [
+      { file: "eternallife.mp3", title: "Eternal Life", artist: "Kanye West, Big Sean, Sheck Wes" },
+      { file: "12000acres.mp3", title: "12,000 Acres", artist: "Kanye West, Pusha T, Victory Boyd, FXXXXY, Sean Leon" },
+      { file: "palmsprings.mp3", title: "Palm Springs", artist: "Kanye West, The-Dream, Ant Clemons, KayCyy" },
+      { file: "tulsa.mp3", title: "Tulsa", artist: "Kanye West" },
+      { file: "southflorida.mp3", title: "South Florida", artist: "Kanye West, KayCyy" },
+      { file: "awakeningkennyg.mp3", title: "Awakening (v1)", artist: "Kanye West, Kenny G" },
+      { file: "ingodscountry.mp3", title: "In God's Country", artist: "Kanye West, Justin Bieber, Common" },
+      { file: "awakeningvictoryboyd.mp3", title: "Awakening (v2)", artist: "Kanye West, Victory Boyd" },
+      { file: "lamonsterv49.mp3", title: "LA Monster (v49)", artist: "Kanye West, Victory Boyd" }
+    ]
+  },
+
+  {
+    name: "Donda: With Child",
+    cover: "dondawithchildcover.jpg",
+    songs: [
+      { file: "precious.mp3", title: "Precious", artist: "Kanye West, Dem Jointz" },
+      { file: "bloodofthelamb.mp3", title: "Blood Of The Lambs", artist: "Kanye West, Pusha T" },
+      { file: "feelaway.mp3", title: "Feel A Way", artist: "Kanye West" },
+      { file: "whathasamericadoneforme.mp3", title: "What Has America Done For Me", artist: "Kanye West, Consequence" },
+      { file: "duranduran.mp3", title: "Duran Duran", artist: "Kanye West" },
+      { file: "godgotme.mp3", title: "God Got Me", artist: "Kanye West" },
+      { file: "futuresounds.mp3", title: "Future Sounds", artist: "Kanye West, Travis Scott, Victory Boyd" },
+      { file: "welcometomylife.mp3", title: "Welcome To My Life", artist: "Kanye West, Ty Dolla $ign" },
+      { file: "byyourside.mp3", title: "By Your Side", artist: "Kanye West, Frank Ocean" },
+      { file: "24.mp3", title: "24", artist: "Kanye West, KayCyy" },
+      { file: "karatekid.mp3", title: "Karate Kid", artist: "Kanye West" },
+      { file: "believewhatisaykaycyysversion.mp3", title: "Believe What I Say", artist: "Kanye West, Kaycyy" },
+      { file: "headshot.mp3", title: "Headshot", artist: "Kanye West, Playboi Carti" }
+    ]
+  },
+
+  {
+    name: "Donda: Spirits Over The Horizon",
+    cover: "dondaspiritsoverthehorizoncover.jpg",
+    songs: [
+      { file: "letthespiritgowild.mp3", title: "Let The Spirit Go Wild", artist: "Kanye West, Nikki Grier, SSC, Ant Clemons" },
+      { file: "runitup.mp3", title: "Run It Up", artist: "Kanye West, Dem Jointz" },
+      { file: "9.10.mp3", title: "9.10", artist: "Kanye West" },
+      { file: "bart.mp3", title: "Bart", artist: "Kanye West" },
+      { file: "prayandleaveitthere.mp3", title: "Pray And Leave It There", artist: "Kanye West, Nikki Grier" },
+      { file: "hybrid.mp3", title: "Hybrid", artist: "Kanye West, Dem Jointz" },
+      { file: "petals.mp3", title: "Petals", artist: "Kanye West" }
+    ]
+  },
+
+   {
+    name: "WAR",
+    cover: "warcover.jpg",
+    songs: [
+      { file: "foronceinmylife.mp3", title: "For Once In My Life", artist: "Kanye West, James Blake, Monica Martin" },
+      { file: "whatiwouldvesaidatvirgilsfuneral.mp3", title: "What I Would've Said At Virgil's Funeral", artist: "Kanye West, James Blake, Vory" },
+      { file: "allinlove.mp3", title: "All In Love", artist: "Kanye West, James Blake, Ty Dolla $ign" },
+      { file: "andtheycameback.mp3", title: "And They Came Back", artist: "Kanye West, James Blake, Don Toliver" },
+      { file: "myway.mp3", title: "My Way", artist: "Kanye West, James Blake" },
+      { file: "holdupgetup.mp3", title: "Hold Up, Get Up", artist: "Kanye West, James Blake" }
+    ]
+  },
+
+  {
+    name: "YEBU",
+    cover: "yebucover.jpg",
+    songs: [
+      { file: "unlock.mp3", title: "Unlock", artist: "Kanye West" },
+      { file: "somedaywellallbefree.mp3", title: "Someday We'll All Be Free", artist: "Kanye West" },
+      { file: "pray.mp3", title: "Pray", artist: "Kanye West" },
+      { file: "sosoon.mp3", title: "So Soon", artist: "Kanye West, Ty Dolla $ign" },
+      { file: "lovelovelove.mp3", title: "Love Love Love", artist: "Kanye West" },
+      { file: "wheretheyat.mp3", title: "Where They At", artist: "Kanye West, Westside Gunn, French Montana" },
+      { file: "pridewin.mp3", title: "Pride Win", artist: "Kanye West" }
+    ]
+  },
+
+  {
+    name: "Bad Bitch Playbook",
+    cover: "badbitchplaybookcover.jpg",
+    songs: [
+      { file: "streetlights.mp3", title: "Street Lights", artist: "Kanye West, Freddie Gibbs" },
+      { file: "nicetomeetyou.mp3", title: "Nice To Meet You", artist: "Kanye West" },
+      { file: "lovemethemost.mp3", title: "Love Me The Most", artist: "Kanye West, Ty Dolla $ign" },
+      { file: "holymountain.mp3", title: "Holy Mountain", artist: "Kanye West, Ty Dolla $ign" },
+      { file: "aintgotno.mp3", title: "Ain't Got No", artist: "Kanye West, Ty Dolla $ign" }
+    ]
+  },
+
+  {
+    name: "VULTURES 1",
+    cover: "vulturesonecover.jpg",
+    songs: [
+      { file: "everybody.mp3", title: "EVERYBODY", artist: "Kanye West, Ty Dolla $ign, Charlie Wilson, Lil Baby" },
+      { file: "vagabond.mp3", title: "VAGABOND", artist: "Kanye West, Ty Dolla $ign, 070 Shake" },
+      { file: "backtome.mp3", title: "BACK TO ME", artist: "Kanye West, Ty Dolla $ign, Freddie Gibbs" }
+    ]
+  },
+
+  {
+    name: "VULTURES 2",
+    cover: "vulturestwocover.jpg",
+    songs: [
+      { file: "melrose.mp3", title: "MELROSE", artist: "Kanye West, Ty Dolla $ign, Playboi Carti" },
+      { file: "takeoffyourdress.mp3", title: "TAKE OFF YOUR DRESS", artist: "Kanye West, Ty Dolla $ign" },
+      { file: "nightsonthemoon.mp3", title: "NIGHTS ON THE MOON", artist: "Kanye West, Ty Dolla $ign" },
+      { file: "guntomyhead.mp3", title: "GUN TO MY HEAD", artist: "Kanye West, Ty Dolla $ign, Kid Cudi" },
+      { file: "fear.mp3", title: "FEAR", artist: "Kanye West, Ty Dolla $ign" }
+    ]
+  },
+
+  {
+    name: "VULTURES 3",
+    cover: "vulturesthreecover.jpg",
+    songs: [
+      { file: "cashcow.mp3", title: "CASH COW", artist: "Kanye West, Ty Dolla $ign, Skepta" },
+      { file: "pussycostmoney.mp3", title: "PUSSY COST MONEY", artist: "Kanye West, Ty Dolla $ign" },
+      { file: "dontkilltheparty.mp3", title: "DON'T KILL THE PARTY", artist: "Kanye West, Ty Dolla $ign" },
+      { file: "matthewworship.mp3", title: "MATTHEW (WORSHIP)", artist: "Kanye West, Ty Dolla $ign, North West" }
+    ]
+  },
+  
+  {
+    name: "CUCK",
+    cover: "cuckcover.jpg",
+    songs: [
+      { file: "ww3.mp3", title: "WW3", artist: "Kanye West" },
+      { file: "cosby.mp3", title: "COSBY", artist: "Kanye West" },
+      { file: "diddyfree.mp3", title: "DIDDY FREE", artist: "Kanye West" },
+      { file: "bianca.mp3", title: "BIANCA", artist: "Kanye West" },
+      { file: "hh.mp3", title: "HEIL HITLER", artist: "Kanye West" },
+      { file: "gaschambers.mp3", title: "GAS CHAMBERS", artist: "Kanye West" },
+      { file: "nitrous.mp3", title: "NITROUS", artist: "Kanye West" }
+    ]
+  },
+
+  {
+    name: "IN A PERFECT WORLD",
+    cover: "inaperfectworldcover.png",
+    songs: [
+      { file: "wayiam.mp3", title: "WAY I AM", artist: "Kanye West" },
+      { file: "sunday.mp3", title: "SUNDAY", artist: "Kanye West" },
+      { file: "missioncontrol.mp3", title: "MISSION CONTROL", artist: "Kanye West, Tony Williams" },
+      { file: "40nights.mp3", title: "40 NIGHTS", artist: "Kanye West, The Game" },
+      { file: "sistersandbrothers.mp3", title: "SISTERS AND BROTHERS", artist: "Kanye West, CyHi the Prynce" },
+      { file: "inmyveins.mp3", title: "IN MY VEINS", artist: "Kanye West, Michael Jackson" },
+      { file: "iapwdamninst.mp3", title: "DAMN (INSTRUMENTAL)", artist: "Kanye West" },
+      { file: "uncle.mp3", title: "UNCLE", artist: "Kanye West" }
+    ]
+  },
+
+   {
+    name: "BULLY",
+    cover: "bullycover.jpg",
+    songs: [
+      { file: "press.mp3", title: "PRESS", artist: "Kanye West" },
+      { file: "hideyourbitch.mp3", title: "HIDE YO BITCH", artist: "Kanye West, JPEGMAFIA" },
+      { file: "darkmatter.mp3", title: "DARK MATTER", artist: "Kanye West" },
+      { file: "highsandlows.mp3", title: "HIGHS AND LOWS (v38)", artist: "Kanye West, Saintboy" },
+      { file: "tina.mp3", title: "TINA", artist: "Kanye West, The Game" },
+      { file: "ohnomyhoodie.mp3", title: "OH NO MY HOODIE", artist: "Kanye West" },
+      { file: "missioncontrol.mp3", title: "MISSION CONTROL", artist: "Kanye West, Tony Williams" },
+      { file: "highsandlowsv1.mp3", title: "HIGHS AND LOWS (v1)", artist: "Kanye West" },
+      { file: "highsandlowsv22.mp3", title: "HIGHS AND LOWS (v22)", artist: "Kanye West" },
+      { file: "redeye.mp3", title: "RED EYE", artist: "Kanye West" }
+    ]
+  },
+];
+
+// --------------------
+// BUILD 
+// --------------------
+ function buildSongs() {
+  const songsDiv = document.getElementById("songs");
+
+  if (!songsDiv || !currentAlbum) return;
+
+  songsDiv.innerHTML = "";
+
+  currentAlbum.songs.forEach((song, i) => {
+    const div = document.createElement("div");
+    div.className = "song";
+    div.innerText = song.title;
+
+    div.onclick = () => playSong(i);
+
+    songsDiv.appendChild(div);
+  });
+}
+// --------------------
+// OPEN ALBUM (NO AUTO PLAY)
+// --------------------
+function openAlbum(i) {
+  currentAlbum = albums[i];
+
+  library.style.display = "none";
+  player.style.display = "block";
+
+  document.getElementById("albumTitle").innerText = currentAlbum.name;
+  document.getElementById("cover").src = currentAlbum.cover;
+
+  buildSongs();
+}
+// --------------------
+// BUILD SONG LIST
+// --------------------
+function buildSongs() {
+  const songsDiv = document.getElementById("songs");
+  songsDiv.innerHTML = "";
+
+  currentAlbum.songs.forEach((song, i) => {
+    const div = document.createElement("div");
+    div.className = "song";
+    div.innerText = song.title;
+
+    div.onclick = () => playSong(i);
+    songsDiv.appendChild(div);
+  });
+}
+
+// --------------------
+// PLAY SONG
+// --------------------
+ function playSong(index) {
+  const song = currentAlbum.songs[index];
+
+  if (!song) return;
+
+  audio.src = song.file;
+
+  document.getElementById("title").innerText = song.title;
+  document.getElementById("artist").innerText = song.artist;
+
+  audio.play();
+
+  updateMediaSession(song);
+}
+// --------------------
+// HIGHLIGHT SONG
+// --------------------
+function highlight(i) {
+  const songs = document.querySelectorAll(".song");
+  songs.forEach(s => s.classList.remove("active"));
+  if (songs[i]) songs[i].classList.add("active");
+}
+
+// --------------------
+// NEXT SONG (AUTO)
+// --------------------
+audio.addEventListener("ended", () => {
+  if (shuffleMode) {
+    shufflePlay();
+  } else {
+    if (!currentAlbum) return;
+
+    currentIndex = (currentIndex + 1) % currentAlbum.songs.length;
+    playSong(currentIndex);
+  }
+});
+
+  function toggleShuffle() {
+  shuffleMode = !shuffleMode;
+
+  if (shuffleMode) {
+    shufflePlay();
+  }
+}
+
+// --------------------
+// BACK TO LIBRARY
+// --------------------
+function goBack() {
+  player.style.display = "none";
+  library.style.display = "grid";
+  audio.pause();
+  nowPlaying.innerText = "Nothing playing";
+}
+  function updateMediaSession(song) {
+  if (!('mediaSession' in navigator)) return;
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: song.title,
+    artist: song.artist,
+    album: currentAlbum.name,
+    artwork: [
+      { src: currentAlbum.cover, sizes: "512x512", type: "image/jpg" }
+    ]
+  });
+
+  navigator.mediaSession.setActionHandler("play", () => {
+    audio.play();
+  });
+
+  navigator.mediaSession.setActionHandler("pause", () => {
+    audio.pause();
+  });
+
+  navigator.mediaSession.setActionHandler("previoustrack", () => {
+    if (!currentAlbum) return;
+    currentIndex = (currentIndex - 1 + currentAlbum.songs.length) % currentAlbum.songs.length;
+    playSong(currentIndex);
+  });
+
+  navigator.mediaSession.setActionHandler("nexttrack", () => {
+    if (!currentAlbum) return;
+    currentIndex = (currentIndex + 1) % currentAlbum.songs.length;
+    playSong(currentIndex);
+  });
+}
+
+  function getAllSongs() {
+  let allSongs = [];
+
+  albums.forEach(album => {
+    album.songs.forEach(song => {
+      allSongs.push({
+        ...song,
+        albumName: album.name
+      });
+    });
+  });
+
+  return allSongs;
+}
+
+function shufflePlay() {
+  const allSongs = getAllSongs();
+
+  const randomIndex = Math.floor(Math.random() * allSongs.length);
+  const song = allSongs[randomIndex];
+
+  currentAlbum = albums.find(a => a.name === song.albumName);
+  currentIndex = currentAlbum.songs.findIndex(s => s.file === song.file);
+
+  audio.src = song.file;
+  document.getElementById("title").innerText = song.title;
+  document.getElementById("artist").innerText = song.artist;
+
+  audio.play();
+
+  updateMediaSession(song);
+}
+
+  function togglePlay() {
+  if (audio.paused) {
+    audio.play();
+  } else {
+    audio.pause();
+  }
+}
+
+function back10() {
+  audio.currentTime = Math.max(0, audio.currentTime - 10);
+}
+
+function forward10() {
+  audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10);
+}
+
+function updateLibraryStats() {
+  let totalSongs = 0;
+
+  albums.forEach(album => {
+    totalSongs += album.songs.length;
+  });
+
+  const stats = document.getElementById("libraryStats");
+  if (!stats) return;
+
+  stats.innerText = `${albums.length} Albums • ${totalSongs} Songs`;
+}
+
+updateLibraryStats();
+
+function buildAlbums() {
+  const library = document.getElementById("library");
+
+  if (!library) return;
+
+  library.innerHTML = "";
+
+  albums.forEach((album, i) => {
+    const div = document.createElement("div");
+    div.className = "album";
+
+    div.innerHTML = `
+      <img src="${album.cover}">
+      <div class="album-title">${album.name}</div>
+    `;
+
+    div.onclick = () => openAlbum(i);
+
+    library.appendChild(div);
+  });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  buildAlbums();
+});
+  
+</script>
+
+</body>
+</html>
