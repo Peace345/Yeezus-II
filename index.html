@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Album</title>
+  <title>Yeezus II/title>
 
   <style>
     body {
@@ -63,6 +63,8 @@
 </div>
 
 <audio id="audio"></audio>
+
+<button id="playPauseBtn" onclick="togglePlay()">▶️ Play</button>
 
 <script>
 
@@ -127,6 +129,14 @@ function playSong(i) {
   const song = currentAlbum.songs[i];
   const audio = document.getElementById("audio");
 
+  audio.addEventListener("ended", () => {
+  if (currentIndex < currentAlbum.songs.length - 1) {
+    playSong(currentIndex + 1);
+  } else {
+    playSong(0);
+  }
+});
+
   audio.src = song.file;
   audio.play();
 
@@ -165,6 +175,34 @@ function updateMediaSession(song) {
     playSong(currentIndex);
   });
 }
+
+  if ("mediaSession" in navigator) {
+
+  navigator.mediaSession.setActionHandler("play", async () => {
+    await audio.play();
+  });
+
+  navigator.mediaSession.setActionHandler("pause", () => {
+    audio.pause();
+  });
+
+}
+
+function togglePlay() {
+  if (audio.paused) {
+    audio.play();
+  } else {
+    audio.pause();
+  }
+}
+
+  audio.addEventListener("play", () => {
+  document.getElementById("playPauseBtn").innerText = "⏸️ Pause";
+});
+
+audio.addEventListener("pause", () => {
+  document.getElementById("playPauseBtn").innerText = "▶️ Play";
+});
   
 </script>
 
