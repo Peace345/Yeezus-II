@@ -127,22 +127,13 @@ function playSong(i) {
   currentIndex = i;
 
   const song = currentAlbum.songs[i];
-  const audio = document.getElementById("audio");
 
-  audio.addEventListener("ended", () => {
-  if (currentIndex < currentAlbum.songs.length - 1) {
-    playSong(currentIndex + 1);
-  } else {
-    playSong(0);
-  }
-});
-
-  audio.src = song.file;
-  audio.play();
+  window.audio.src = song.file;
+  window.audio.play();
 
   updateMediaSession(song, currentAlbum);
 }
-  
+
 function updateMediaSession(song) {
   if (!('mediaSession' in navigator)) return;
 
@@ -202,6 +193,26 @@ function togglePlay() {
 
 audio.addEventListener("pause", () => {
   document.getElementById("playPauseBtn").innerText = "▶️ Play";
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+
+  const audio = document.getElementById("audio");
+
+  audio.addEventListener("ended", () => {
+    if (!currentAlbum) return;
+
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex < currentAlbum.songs.length) {
+      playSong(nextIndex);
+    } else {
+      playSong(0);
+    }
+  });
+
+  // expose audio globally so playSong can use it safely
+  window.audio = audio;
 });
   
 </script>
